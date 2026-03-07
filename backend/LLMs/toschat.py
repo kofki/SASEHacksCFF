@@ -11,11 +11,8 @@ SYSTEM_PROMPT = (
 )
 
 
-def create_chat(tos_path: str = None):
-    """Create a Gemini chat session preloaded with the ToS context."""
-    if tos_path is None:
-        tos_path = os.path.join(os.path.dirname(__file__), "tos.txt")
-
+def create_chat(tos_text: str):
+    """Create a Gemini chat session preloaded with the provided ToS text as context."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
@@ -25,9 +22,6 @@ def create_chat(tos_path: str = None):
         "gemini-2.5-flash",
         system_instruction=SYSTEM_PROMPT,
     )
-
-    with open(tos_path, "r", encoding="utf-8") as f:
-        tos_text = f.read()
 
     chat = model.start_chat(history=[
         {"role": "user", "parts": [f"Here is the Terms of Service I'd like to ask about:\n\n{tos_text}"]},
@@ -41,16 +35,3 @@ def ask(chat, question: str) -> str:
     """Send a question to an existing chat session and return the response."""
     response = chat.send_message(question)
     return response.text
-
-
-if __name__ == "__main__":
-    chat = create_chat()
-    print("ToS Chatbot ready. Type 'quit' to exit.\n")
-    while True:
-        question = input("You: ").strip()
-        if question.lower() in ("quit", "exit", "q"):
-            break
-        if not question:
-            continue
-        answer = ask(chat, question)
-        print(f"\nBot: {answer}\n")
