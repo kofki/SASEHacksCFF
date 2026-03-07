@@ -1,4 +1,4 @@
-import { Title, Subheading } from '../components'
+import { Title, Subheading, Navbar } from '../components'
 import creditPurple1 from '../assets/credit_purple1.png'
 import creditPurple2 from '../assets/credit_purple2.png'
 import creditMagenta1 from '../assets/credit_magenta1.png'
