@@ -1,10 +1,13 @@
+from dotenv import load_dotenv
+load_dotenv()  # Load .env before any other imports read os.environ
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.ai import ai_router
 from routes.cards import cards_router
 from routes.scans import scans_router
 
-app = FastAPI(title="SubShield API")
+app = FastAPI(title="SASEHacks API")
 
 app.add_middleware(
     CORSMiddleware,
