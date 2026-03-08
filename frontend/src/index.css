@@ -58,3 +58,5 @@ body:has(.extension-container) {
 .animate-card-spin {
   animation: card-spin 0.6s ease-out forwards;
 }
+
+
