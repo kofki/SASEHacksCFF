@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { VirtualCardForm } from '../components'
+import logo from '../assets/Subscriptologo.png'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -163,8 +164,11 @@ export default function Popup() {
 
   return (
     <div className="flex flex-col h-[500px] w-[350px] min-w-[350px] min-h-[500px] bg-white text-black font-sans overflow-hidden border-4 border-black">
-      <header className="p-4 bg-white border-b-4 border-black text-center flex justify-between items-center shrink-0">
-        <h1 className="m-0 text-lg font-bold text-black uppercase tracking-wider">Subscriptos</h1>
+      <header className="p-4 bg-white border-b-4 border-black flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="Logo" className="w-6 h-6 object-contain" />
+          <h1 className="m-0 text-lg font-bold text-black uppercase tracking-wider">Subscriptos</h1>
+        </div>
         {user ? (
           <span className="text-xs font-mono bg-brand-cyan px-2 py-1 border-2 border-black rounded-none font-bold">Logged In</span>
         ) : (
