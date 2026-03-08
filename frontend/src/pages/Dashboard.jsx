@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [chatHistory, setChatHistory] = useState([])
   const [isChatting, setIsChatting] = useState(false)
 
+  const [analysisStarted, setAnalysisStarted] = useState(false)
   const [tablesVisible, setTablesVisible] = useState(false)
   const [chatbotVisible, setChatbotVisible] = useState(false)
   const [uploadAnimatingOut, setUploadAnimatingOut] = useState(false)
@@ -44,20 +45,23 @@ export default function Dashboard() {
   const RESULTS_COLLAPSE_MS = 850
 
   useEffect(() => {
-    if (!report) {
-      setTablesVisible(false)
-      setChatbotVisible(false)
+    const showResults = (report || analysisStarted) && !resultsClosing
+    if (!showResults) {
+      if (!analysisStarted) {
+        setTablesVisible(false)
+        setChatbotVisible(false)
+      }
       return
     }
     const raf = requestAnimationFrame(() => {
       setTablesVisible(true)
     })
-    const t = setTimeout(() => setChatbotVisible(true), Math.round(RESULTS_EXPAND_MS * 0.5))
+    const t = setTimeout(() => setChatbotVisible(true), 0)
     return () => {
       cancelAnimationFrame(raf)
       clearTimeout(t)
     }
-  }, [report])
+  }, [report, analysisStarted, resultsClosing])
 
   useEffect(() => {
     if (!resultsClosing) return
@@ -65,6 +69,7 @@ export default function Dashboard() {
       setReport(null)
       setTranslation('')
       setChatHistory([])
+      setAnalysisStarted(false)
       setResultsClosing(false)
       setTosText('')
       setScannedText('')
@@ -119,6 +124,7 @@ export default function Dashboard() {
 
   const handleStartAnalysis = async () => {
     if (!hasText || isAnalyzing) return;
+    setAnalysisStarted(true);
     setIsAnalyzing(true);
     setAnalysisError('');
     setScannedText(tosText); // save it for chat initialization
@@ -149,6 +155,7 @@ export default function Dashboard() {
     } catch (e) {
       console.error("Analysis failed", e);
       setAnalysisError("An error occurred during analysis. Please try again.");
+      setAnalysisStarted(false);
     } finally {
       setIsAnalyzing(false);
     }
@@ -221,15 +228,15 @@ export default function Dashboard() {
         />
 
         {/* Translation + SCORES: expand on analysis, slow collapse on Start another analysis */}
-        {(report || resultsClosing) && (
+        {(report || resultsClosing || analysisStarted) && (
           <div
-            className="relative z-20 flex-shrink-0 mb-2 overflow-hidden ease-out"
+            className={`relative z-20 overflow-hidden ease-out ${(report || analysisStarted) && !resultsClosing ? 'flex-1 min-h-0 flex flex-col mb-2' : 'flex-shrink-0 mb-2'}`}
             style={{
-              maxHeight: tablesVisible && !resultsClosing ? 420 : 0,
+              maxHeight: tablesVisible && !resultsClosing ? 9999 : 0,
               transition: `max-height ${resultsClosing ? RESULTS_COLLAPSE_MS : RESULTS_EXPAND_MS}ms ease-out`,
             }}
           >
-            <div className="flex justify-end mb-3">
+            <div className="flex justify-end mb-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setResultsClosing(true)}
@@ -238,45 +245,75 @@ export default function Dashboard() {
                 Start another analysis
               </button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="border-[6px] border-black bg-white p-6 max-h-[300px] overflow-y-auto">
+            <div className="grid gap-4 sm:grid-cols-2 grid-rows-[1fr] flex-1 min-h-0">
+              <div className="border-[6px] border-black bg-white p-6 min-h-0 overflow-y-auto">
                 <h3 className="font-bold text-black text-[1.625rem] mb-2 sticky top-0 bg-white z-10 pb-2 border-b-4 border-black">Translation</h3>
-                <p className="font-mono text-black/90 text-[clamp(0.9375rem,1.25vw+0.5rem,1.125rem)] pt-2">{translation || 'Translating...'}</p>
+                {isAnalyzing && !translation ? (
+                  <div className="pt-2 space-y-3 font-mono">
+                    <div className="h-5 w-full max-w-full bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 w-[95%] bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 w-[88%] bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 w-[92%] bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 w-[75%] bg-gray-200 rounded animate-pulse" />
+                  </div>
+                ) : (
+                  <p className="font-mono text-black/90 text-[clamp(0.9375rem,1.25vw+0.5rem,1.125rem)] pt-2">{translation || ''}</p>
+                )}
               </div>
-              <div className="border-[6px] border-black bg-white p-6 max-h-[300px] overflow-y-auto">
+              <div className="border-[6px] border-black bg-white p-6 min-h-0 overflow-y-auto">
                 <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2 border-b-4 border-black">
                   <h3 className="font-bold text-black text-[1.625rem] m-0">Scores</h3>
-                  <div className="font-bold text-xl text-black">
-                    Safety: <span className={
-                      (report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3 >= 80 ? 'text-green-500' :
-                        (report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3 >= 50 ? 'text-yellow-500' :
-                          'text-brand-magenta'
-                    }>{Math.round((report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3)}/100</span>
-                  </div>
+                  {report ? (
+                    <div className="font-bold text-xl text-black">
+                      Safety: <span className={
+                        (report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3 >= 80 ? 'text-green-500' :
+                          (report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3 >= 50 ? 'text-yellow-500' :
+                            'text-brand-magenta'
+                      }>{Math.round((report.data_privacy.score + report.integrity.score + report.consumer_fairness.score) / 3)}/100</span>
+                    </div>
+                  ) : (
+                    <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                  )}
                 </div>
-                <ul className="space-y-4 pt-2">
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-brand-cyan shrink-0" />
-
-                    <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Integrity Score: {report.integrity.score}/100</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-brand-magenta shrink-0" />
-                    <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Data Privacy: {report.data_privacy.score}/100</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-brand-purple shrink-0" />
-                    <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Consumer Fairness: {report.consumer_fairness.score}/100</span>
-                  </li>
-                </ul>
+                {report ? (
+                  <ul className="space-y-4 pt-2">
+                    <li className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-brand-cyan shrink-0" />
+                      <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Integrity Score: {report.integrity.score}/100</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-brand-magenta shrink-0" />
+                      <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Data Privacy: {report.data_privacy.score}/100</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-brand-purple shrink-0" />
+                      <span className="font-semibold text-black text-[clamp(1.125rem,1.75vw+0.6rem,1.5rem)]">Consumer Fairness: {report.consumer_fairness.score}/100</span>
+                    </li>
+                  </ul>
+                ) : (
+                  <ul className="space-y-4 pt-2">
+                    <li className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-gray-200 shrink-0 animate-pulse" />
+                      <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-gray-200 shrink-0 animate-pulse" />
+                      <div className="h-6 w-44 bg-gray-200 rounded animate-pulse" />
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-gray-200 shrink-0 animate-pulse" />
+                      <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                    </li>
+                  </ul>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {/* One component: ToS view or Start chatting (same layer) */}
-        <div className="relative border-[6px] border-black bg-white flex flex-col overflow-hidden z-10 flex-1 min-h-[260px]">
-          {!report || resultsClosing ? (
+        <div className={`relative border-[6px] border-black bg-white flex flex-col overflow-hidden z-10 ${(report || analysisStarted) && !resultsClosing ? 'max-h-[160px] shrink-0' : 'flex-1 min-h-[260px]'}`}>
+          {!(report || analysisStarted) || resultsClosing ? (
             <div className="flex flex-col flex-1 min-h-0 p-8 pb-4">
               <textarea
                 value={tosText}
@@ -323,7 +360,7 @@ export default function Dashboard() {
               onSubmit={handleChatSubmit}
               className="flex-1 min-h-0 flex flex-col"
             >
-              <div className="flex-1 min-h-0 p-6 flex flex-col overflow-y-auto font-mono text-lg space-y-4">
+              <div className="flex-1 min-h-0 pt-0 px-6 pb-8 flex flex-col overflow-y-auto font-mono text-lg space-y-4">
                 {chatHistory.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`p-4 max-w-[80%] border-4 border-black ${msg.role === 'user' ? 'bg-brand-cyan text-black' : 'bg-gray-100 text-black'}`}>
@@ -339,7 +376,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              <div className={`flex-shrink-0 flex items-end p-4 bg-white ${chatHistory.length > 0 ? 'border-t-[6px] border-black' : ''}`}>
+              <div className={`flex-shrink-0 flex items-end px-4 pt-0 pb-6 bg-white ${chatHistory.length > 0 ? 'border-t-[6px] border-black' : ''}`}>
                 <textarea
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
@@ -350,10 +387,10 @@ export default function Dashboard() {
                 />
                 <button
                   type="submit"
-                  disabled={isChatting || !chatInput.trim()}
+                  disabled={isChatting || isAnalyzing || !chatInput.trim()}
                   className="bg-brand-cyan text-black font-semibold px-8 py-3.5 text-lg border-4 border-black rounded-none shadow-[4px_4px_0_0_#000] hover:opacity-90 cursor-pointer mb-2 ml-4 disabled:opacity-50"
                 >
-                  Ask
+                  {isAnalyzing ? 'Analyzing...' : 'Ask'}
                 </button>
               </div>
             </form>
