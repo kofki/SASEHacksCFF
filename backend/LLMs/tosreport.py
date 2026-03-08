@@ -4,6 +4,8 @@ import google.generativeai as genai
 
 def analyze_tos(tos_text: str) -> dict:
     """Analyze a Terms of Service string and return a structured JSON analysis using Gemini."""
+def analyze_tos(tos_text: str) -> dict:
+    """Analyze a Terms of Service string and return a structured JSON analysis using Gemini."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
@@ -58,9 +60,6 @@ def analyze_tos(tos_text: str) -> dict:
         result = json.loads(raw)
     except json.JSONDecodeError:
         raise RuntimeError(f"Failed to parse Gemini response as JSON: {raw[:200]}")
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=2, ensure_ascii=False)
 
     return result
 
