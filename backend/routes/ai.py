@@ -17,7 +17,7 @@ _chat_sessions: dict = {}
 
 # All columns that the three functions fill in
 _SCAN_COLUMNS = [
-    "tos", "translation",
+    "tos", "translation", "source_name",
     "data_privacy_score", "data_privacy_just",
     "integrity_score", "integrity_just",
     "consumer_fairness_score", "consumer_fairness_just",
@@ -51,6 +51,20 @@ def _save_to_scan(data: dict):
         supabase.table("scans").insert(data).execute()
 
 
+def _find_by_company(company_name: str):
+    """Check if a scan with this company name already exists."""
+    rows = (
+        supabase.table("scans")
+        .select("*")
+        .eq("source_name", company_name)
+        .limit(1)
+        .execute()
+    )
+    if rows.data:
+        return rows.data[0]
+    return None
+
+
 @ai_router.post("/tos")
 def save_tos(current_user: User = Depends(get_current_user)):
     """Read the ToS text and save it to the scans table."""
@@ -62,13 +76,24 @@ def save_tos(current_user: User = Depends(get_current_user)):
 
 @ai_router.get("/report")
 def get_report(current_user: User = Depends(get_current_user)):
-    """Return the structured ToS report with scores."""
+    """Return the structured ToS report with scores. Returns cached data if company already scanned."""
     try:
         result = analyze_tos()
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    company_name = result["company_name"]
+    existing = _find_by_company(company_name)
+    if existing and existing.get("data_privacy_score") is not None:
+        return {"report": {
+            "company_name": existing["source_name"],
+            "data_privacy": {"score": existing["data_privacy_score"], "justification": existing["data_privacy_just"]},
+            "integrity": {"score": existing["integrity_score"], "justification": existing["integrity_just"]},
+            "consumer_fairness": {"score": existing["consumer_fairness_score"], "justification": existing["consumer_fairness_just"]},
+        }, "cached": True}
+
     _save_to_scan({
+        "source_name": company_name,
         "data_privacy_score": result["data_privacy"]["score"],
         "data_privacy_just": result["data_privacy"]["justification"],
         "integrity_score": result["integrity"]["score"],
@@ -77,22 +102,30 @@ def get_report(current_user: User = Depends(get_current_user)):
         "consumer_fairness_just": result["consumer_fairness"]["justification"],
     })
 
-    return {"report": result}
+    return {"report": result, "cached": False}
 
 
 @ai_router.get("/translate")
 def get_translate(current_user: User = Depends(get_current_user)):
-    """Return the brainrot-flavored red flag summary."""
+    """Return the brainrot-flavored red flag summary. Returns cached data if company already scanned."""
+    with open(TOS_PATH, "r", encoding="utf-8") as f:
+        tos_text = f.read()
+
+    # Check if the most recent scan already has a translation
+    incomplete = _find_incomplete_scan()
+    if incomplete and incomplete.get("source_name"):
+        existing = _find_by_company(incomplete["source_name"])
+        if existing and existing.get("translation") is not None:
+            return {"translation": existing["translation"], "cached": True}
+
     try:
-        with open(TOS_PATH, "r", encoding="utf-8") as f:
-            tos_text = f.read()
         result = translate_tos(tos_text)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     _save_to_scan({"translation": result})
 
-    return {"translation": result}
+    return {"translation": result, "cached": False}
 
 
 class ChatRequest(BaseModel):
