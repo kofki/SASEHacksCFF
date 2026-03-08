@@ -343,9 +343,9 @@ export default function Dashboard() {
         {/* Translation + SCORES: expand on analysis, slow collapse on Start another analysis */}
         {(report || resultsClosing || analysisStarted) && (
           <div
-            className={`relative z-20 overflow-hidden ease-out ${(report || analysisStarted) && !resultsClosing ? 'flex-1 min-h-0 flex flex-col mb-2' : 'flex-shrink-0 mb-2'}`}
+            className={`relative z-20 overflow-hidden ease-out ${(report || analysisStarted) && !resultsClosing ? 'flex-shrink-0 flex flex-col mb-2' : 'flex-shrink-0 mb-2'}`}
             style={{
-              maxHeight: tablesVisible && !resultsClosing ? 9999 : 0,
+              maxHeight: tablesVisible && !resultsClosing ? '70%' : 0,
               transition: `max-height ${resultsClosing ? RESULTS_COLLAPSE_MS : RESULTS_EXPAND_MS}ms ease-out`,
             }}
           >
@@ -425,7 +425,9 @@ onClick={() => setResultsClosing(true)}
         )}
 
         {/* One component: ToS view or Start chatting (same layer) */}
-        <div className={`relative border-[6px] border-black bg-white flex flex-col overflow-visible z-10 ${(report || analysisStarted) && !resultsClosing ? 'max-h-[160px] shrink-0' : 'flex-1 min-h-[260px]'}`}>
+        <div className={`relative border-[6px] border-black bg-white flex flex-col overflow-hidden z-10 ${(report || analysisStarted) && !resultsClosing
+          ? (chatHistory.length > 0 || isChatting ? 'flex-1 min-h-0 min-h-[320px]' : 'shrink-0 max-h-[180px]')
+          : 'flex-1 min-h-[260px]'}`}>
           {!(report || analysisStarted) || resultsClosing ? (
             <div className="flex flex-col flex-1 min-h-0 p-8 pb-4 overflow-visible">
               <textarea
@@ -510,9 +512,9 @@ onClick={() => setResultsClosing(true)}
           ) : (
             <form
               onSubmit={handleChatSubmit}
-              className="flex-1 min-h-0 flex flex-col"
+              className="flex-1 min-h-0 flex flex-col overflow-hidden"
             >
-              <div className="flex-1 min-h-0 pt-0 px-6 pb-8 flex flex-col overflow-y-auto font-mono text-lg space-y-4">
+              <div className="flex-1 min-h-0 pt-0 px-6 pb-8 flex flex-col overflow-y-auto overflow-x-hidden font-mono text-lg space-y-4 justify-end overscroll-contain">
                 {chatHistory.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`p-4 max-w-[80%] border-4 border-black ${msg.role === 'user' ? 'bg-brand-cyan text-black' : 'bg-gray-100 text-black'}`}>
