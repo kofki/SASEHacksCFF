@@ -110,7 +110,7 @@ Open `http://localhost:5173` in your browser.
 Subscriptos follows a client-server architecture with a React frontend, FastAPI backend, Gemini-powered AI analysis layer, and Supabase for auth and data persistence.
 
 <p align="center">
-  <img src="thngabob.png" alt="Subscriptos Architecture" width="800">
+  <img src="thngabob1.png" alt="Subscriptos Architecture" width="800">
 </p>
 
 ### AI Layer
